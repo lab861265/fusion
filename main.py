@@ -8,7 +8,8 @@ import os
 import requests
 import time
 import hashlib
-
+import re
+from datetime import datetime
 
 from typing import List
 import platform
@@ -48,9 +49,10 @@ def upload_file(url, file_path):
             
             current_chunk += 1
             data = res_json
-        
+
+        now = datetime.now()
         data['name'] = os.path.basename(file_path)
-        data['hash'] = 'hash_placeholder'  # 請替換為計算哈希值的方法
+        data['hash'] =  now.strftime("%Y-%m-%d %H:%M:%S")  # 請替換為計算哈希值的方法
         print(f'文件大小：{os.path.getsize(file_path)}  {data["size"]}')
         # 調用捕獲視頻畫面並上傳縮略圖的函數，並將返回的數據更新到 data 對象中
         # tres = capture_video_frame_and_upload(file_path)
@@ -155,18 +157,46 @@ def mp42gif(input_mp4_filename, output_gif_filename):
     ]
     subprocess.run(ffmpeg_command)
 
-def proc_media(media_filename, face_filename, out_file_path):
-    #python run.py -s a.jpg -t b.mp4 -o o.mp4 --execution-providers cuda --headless    --face-swapper-model blendface_256
+def proc_media(media_filename, face_filename, out_file_path, is_enhancement):
+    print(media_filename, face_filename, out_file_path)
     command = [
         'python',
         'run.py',
         '-s', face_filename, 
         '-t', media_filename,
         '-o', out_file_path,
-        '--execution-providers', 'cuda',
-        '--headless'
+        '--execution-providers', 'cuda'
     ]
+    if is_enhancement:
+        command.append('face_enhancer')
+        
     subprocess.run(command)
+    return
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True  # 用于以文本模式获取输出
+    )
+
+    while True:
+        output_line = process.stdout.readline()
+        if not output_line and process.poll() is not None:
+            break
+
+        # 在这里解析输出并提取进度信息
+        progress_match = re.search(r'Processing:\s+(\d+)%', output_line)
+        if progress_match:
+            progress_percentage = int(progress_match.group(1))
+            print(f'Progress: {progress_percentage}%')
+
+        # 如果你还想要其他输出，可以在这里处理
+
+        time.sleep(1)
+
+    process.stdout.close()
+    process.wait() 
+
 
 def delete_files(file_paths):
     for file_path in file_paths:
@@ -181,11 +211,11 @@ def work():
     data = callApi("workerGetTask", {})
     print(data)
 
-    proc_media('media_filename', 'face_filename', 'out_file_path')
+  #  proc_media('media_filename', 'face_filename', 'out_file_path')
     if data["code"] != 0:
         print("Error: Code is not 0.")
         time.sleep(3)
-        sys.exit(0)
+    #    sys.exit(0)
         return
     try:
         delete_files(['face.png','media.gif','media.png','media.mp4','media_out.gif','media_out.mp4','media_out.jpg'])
@@ -215,11 +245,13 @@ def work():
     download_file(face_file_url, face_filename)
 
     extName = os.path.splitext(media_file_url)[1].lower()
+
+    is_enhancement = int(taskData.get('is_enhancement', 0))
         
     if media_filename.lower().endswith(('.mp4', '.m4v', '.mkv', '.avi', '.mov', '.webm', '.mpeg', '.mpg', '.wmv', '.flv', '.asf', '.3gp', '.3g2', '.ogg', '.vob', '.rmvb', '.ts', '.m2ts', '.divx', '.xvid', '.h264', '.avc', '.hevc', '.vp9', '.avchd')):
         
         out_file_path = 'media_out.mp4'
-        proc_media(media_filename, face_filename, out_file_path)
+        proc_media(media_filename, face_filename, out_file_path, is_enhancement)
         thumb_file_path = 'thumb_media.jpg'
         generate_video_thumbnail(out_file_path, thumb_file_path)
         if not os.path.exists(out_file_path):
@@ -229,7 +261,8 @@ def work():
         upload_video_res = upload_file('https://fakeface.io/upload.php?m=media', out_file_path)
         upload_image_res = upload_image('https://fakeface.io/upload.php?m=thumb', thumb_file_path)
         print('Upload result:', upload_video_res, upload_image_res)
-        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_res['link'], 'thumb_url':upload_image_res['thumb'], 'file_hash':upload_video_res['size']})
+        now = datetime.now()
+        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_res['link'], 'thumb_url':upload_image_res['thumb'], 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S")})
         print('Api result:', api_res)
         addLog(1, 3, 'finish', 100)
         return
@@ -238,7 +271,7 @@ def work():
         out_file_path = 'media_out.mp4'
         print('文件后缀：', extName)
         gif2mp4('media.gif', 'media.mp4')
-        proc_media(media_filename, face_filename, out_file_path)
+        proc_media('media.mp4', face_filename, out_file_path, is_enhancement)
         thumb_file_path = 'thumb_media.jpg'
         generate_video_thumbnail(out_file_path, thumb_file_path)
         mp42gif('media_out.mp4', 'media_out.gif')
@@ -250,14 +283,15 @@ def work():
         upload_video_res = upload_file('https://fakeface.io/upload.php?m=media', out_file_path)
         upload_image_res = upload_image('https://fakeface.io/upload.php?m=thumb', thumb_file_path)
         print('Upload result:', upload_video_res, upload_image_res)
-        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_res['link'], 'thumb_url':upload_image_res['thumb'], 'file_hash':upload_video_res['size']})
+        now = datetime.now()
+        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_res['link'], 'thumb_url':upload_image_res['thumb'], 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S")})
         print('Api result:', api_res)
         addLog(1, 3, 'finish', 100)
         return
     if media_filename.lower().endswith(('.jpg')):
         out_file_path = 'media_out.jpg'
         real_out_file_path = 'media_out.jpg'
-        #proc_image(media_filename, face_filename, out_file_path)
+        proc_media(media_filename, face_filename, out_file_path, 1)
 
         if not os.path.exists(out_file_path):
             print(f"找不到文件 {out_file_path}")
@@ -265,14 +299,15 @@ def work():
             return
      #   addLog(0, 2, 'finish quickly', 99)
         upload_res = upload_image('https://fakeface.io/upload.php?m=png', out_file_path)
-        
+        now = datetime.now()
+
         print('Upload result:', upload_res)
-        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_res['link'], 'thumb_url':upload_res['thumb'], 'file_hash':'121212'})
+        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_res['link'], 'thumb_url':upload_res['thumb'], 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S") })
         print('Api result:', api_res)
         addLog(1, 3, 'finish', 100)
         return
     addLog(1, 3, 'wrong file format', 100)
 
 if __name__ == '__main__':
-    while True:
-        work()
+   # while True:
+    work()
