@@ -290,7 +290,7 @@ def work():
         
         convert_to_720p(media_filename)
 
-        media_filename = 'media.mp4'
+        #media_filename = 'media.mp4'
         
         out_file_path = 'media_out.mp4'
         proc_media(media_filename, face_filename, out_file_path, is_enhancement)
