@@ -43,7 +43,7 @@ def convert_to_720p(input_path):
         'ffmpeg',
         '-y', 
         '-i', renamed_path,
-        '-vf', 'scale=-1:720',
+        '-vf', 'scale=trunc(iw/2)*2:720',
         output_path
     ]
     subprocess.run(ffmpeg_command)
