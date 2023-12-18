@@ -22,7 +22,10 @@ import shutil
 def is_video_720p(file_path):
     clip = VideoFileClip(file_path)
     resolution = clip.size
+    if os.path.splitext(file_path)[1].lower() != '.mp4':
+        return False
     print(f"Video resolution: {resolution[0]}x{resolution[1]}")
+    
     return resolution[0] <= 1280 and resolution[1] <= 720
 
 def convert_to_720p(input_path):
@@ -203,6 +206,7 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement):
         '-o', './' + out_file_path,
         '--execution-providers', 'cuda', 
         '--headless',
+        '--output-video-encoder', 'libx265',
         '--frame-processors','face_swapper'
     ]
     if is_enhancement:
@@ -290,7 +294,7 @@ def work():
         
         convert_to_720p(media_filename)
 
-        #media_filename = 'media.mp4'
+        media_filename = 'media.mp4'
         
         out_file_path = 'media_out.mp4'
         proc_media(media_filename, face_filename, out_file_path, is_enhancement)
