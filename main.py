@@ -206,7 +206,7 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement):
         '-o', './' + out_file_path,
         '--execution-providers', 'cuda', 
         '--headless',
-        '--output-video-encoder', 'libx265',
+        '--output-video-encoder', 'libvpx-vp9',
         '--reference-face-distance','1',
         '--face-detector-score','0.25',
         '--frame-processors','face_swapper'
