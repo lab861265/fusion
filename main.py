@@ -195,7 +195,7 @@ def mp42gif(input_mp4_filename, output_gif_filename):
     ]
     subprocess.run(ffmpeg_command)
 
-def proc_media(media_filename, face_filename, out_file_path, is_enhancement):
+def proc_media(media_filename, face_filename, out_file_path, is_enhancement, reference_frame_number):
     print(media_filename, face_filename, out_file_path)
     #python run.py -o ./out.mp4 -s face.jpg -t media.mp4 --frame-processors face_swapper  --headless  --execution-providers coreml
     command = [
@@ -207,6 +207,7 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement):
         '--execution-providers', 'cuda', 
         '--headless',
         '--output-video-encoder', 'libvpx-vp9',
+        '--reference-frame-number', reference_frame_number,
         '--reference-face-distance','1',
         '--face-detector-score','0.25',
         '--frame-processors','face_swapper'
@@ -291,6 +292,7 @@ def work():
     extName = os.path.splitext(media_file_url)[1].lower()
 
     is_enhancement = int(taskData.get('is_enhancement', 0))
+    reference_frame_number = int(taskData.get('reference_frame_number', 0))
         
     if media_filename.lower().endswith(('.mp4', '.m4v', '.mkv', '.avi', '.mov', '.webm', '.mpeg', '.mpg', '.wmv', '.flv', '.asf', '.3gp', '.3g2', '.ogg', '.vob', '.rmvb', '.ts', '.m2ts', '.divx', '.xvid', '.h264', '.avc', '.hevc', '.vp9', '.avchd')):
         
@@ -299,7 +301,7 @@ def work():
         media_filename = 'media.mp4'
         
         out_file_path = 'media_out.mp4'
-        proc_media(media_filename, face_filename, out_file_path, is_enhancement)
+        proc_media(media_filename, face_filename, out_file_path, is_enhancement, reference_frame_number)
         thumb_file_path = 'thumb_media.jpg'
         generate_video_thumbnail(out_file_path, thumb_file_path)
         if not os.path.exists(out_file_path):
