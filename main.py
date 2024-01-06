@@ -207,7 +207,7 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement, ref
         '--execution-providers', 'cuda', 
         '--headless',
         '--output-video-encoder', 'libvpx-vp9',
-        '--reference-frame-number', reference_frame_number,
+#        '--reference-frame-number', reference_frame_number,
         '--reference-face-distance','1',
         '--face-detector-score','0.25',
         '--frame-processors','face_swapper'
