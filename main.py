@@ -323,7 +323,7 @@ def work():
         out_file_path = 'media_out.mp4'
         print('文件后缀：', extName)
         gif2mp4('media.gif', 'media.mp4')
-        proc_media('media.mp4', face_filename, out_file_path, is_enhancement)
+        proc_media('media.mp4', face_filename, out_file_path, is_enhancement,reference_frame_number)
         thumb_file_path = 'thumb_media.jpg'
         generate_video_thumbnail(out_file_path, thumb_file_path)
         mp42gif('media_out.mp4', 'media_out.gif')
@@ -343,7 +343,7 @@ def work():
     if media_filename.lower().endswith(('.jpg')):
         out_file_path = 'media_out.jpg'
         real_out_file_path = 'media_out.jpg'
-        proc_media(media_filename, face_filename, out_file_path, 1)
+        proc_media(media_filename, face_filename, out_file_path, 1,reference_frame_number)
 
         if not os.path.exists(out_file_path):
             print(f"找不到文件 {out_file_path}")
