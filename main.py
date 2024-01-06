@@ -292,7 +292,7 @@ def work():
     extName = os.path.splitext(media_file_url)[1].lower()
 
     is_enhancement = int(taskData.get('is_enhancement', 0))
-    reference_frame_number = int(taskData.get('reference_frame_number', 0))
+    reference_frame_number = str(taskData.get('reference_frame_number', 0))
         
     if media_filename.lower().endswith(('.mp4', '.m4v', '.mkv', '.avi', '.mov', '.webm', '.mpeg', '.mpg', '.wmv', '.flv', '.asf', '.3gp', '.3g2', '.ogg', '.vob', '.rmvb', '.ts', '.m2ts', '.divx', '.xvid', '.h264', '.avc', '.hevc', '.vp9', '.avchd')):
         
