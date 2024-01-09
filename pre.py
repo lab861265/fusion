@@ -168,7 +168,7 @@ def detect_first_face_frame(input_video_filename):
 
 def work():
     global taskData
-    data = callApi("workerGetTask?t=pre", {})
+    data = callApi("workerGetTask", {'type':'pre'})
     print(data)
 
   #  proc_media('media_filename', 'face_filename', 'out_file_path')
@@ -206,24 +206,26 @@ def work():
 
     extName = os.path.splitext(media_file_url)[1].lower()
 
-    is_enhancement = int(taskData.get('is_enhancement', 0))
-    reference_frame_number = str(taskData.get('reference_frame_number', 0))
-
-    print('is_enhancement, reference_frame_number', is_enhancement, reference_frame_number);
-        
-    if media_filename.lower().endswith(('.mp4', '.m4v', '.mkv', '.avi', '.mov', '.webm', '.mpeg', '.mpg', '.wmv', '.flv', '.asf', '.3gp', '.3g2', '.ogg', '.vob', '.rmvb', '.ts', '.m2ts', '.divx', '.xvid', '.h264', '.avc', '.hevc', '.vp9', '.avchd')):
+    if media_filename.lower().endswith(('.m4v', '.mkv', '.avi', '.mov', '.webm', '.mpeg', '.mpg', '.wmv', '.flv', '.asf', '.3gp', '.3g2', '.ogg', '.vob', '.rmvb', '.ts', '.m2ts', '.divx', '.xvid', '.h264', '.avc', '.hevc', '.vp9', '.avchd')):
         
         convert_to_720p(media_filename)
         out_file_path = 'media.mp4'
 
-        first_face_frame = detect_first_face_frame(out_file_path)
-        print('first_face_frame', first_face_frame)
+        is_enhancement = int(taskData.get('is_enhancement', 0))
+        reference_frame_number = str(taskData.get('reference_frame_number', 0))
+
+        print('is_enhancement, reference_frame_number', is_enhancement, reference_frame_number);
+        
 
         if not os.path.exists(out_file_path):
             print(f"找不到文件 {out_file_path}")
-            addLog(1, -1, 'Processing failed', 99)
+            
             return
-        addLog(0, 2, 'waiting', 10)
+
+        upload_video_res = upload_file('https://fakeface.io/upload.php?m=media', out_file_path)
+        
+        callApi("workerUpdateTask", {'task_id':taskData['_id'], 'media_url':upload_video_res, 'preprocessing':1, 'state':-1, 'finish':1})
+        
         return
 
    
