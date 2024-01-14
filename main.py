@@ -206,10 +206,12 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement, ref
         '-o', './' + out_file_path,
         '--execution-providers', 'cuda', 
         '--headless',
+        '--face-selector-mode', 'many',
+        '--face-analyser-order', 'best-worst',
         '--output-video-encoder', 'libx264',
         '--face-mask-types','occlusion',
-        '--reference-frame-number', reference_frame_number,
-        '--reference-face-distance','1',
+        #'--reference-frame-number', reference_frame_number,
+        #'--reference-face-distance','1',
         '--face-detector-score','0.25',
         '--frame-processors','face_swapper'
     ]
