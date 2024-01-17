@@ -159,7 +159,7 @@ def calculate_md5(input_string):
 def callApi(name, data):
     try:
         #TODO 做簽名認證
-        response = requests.post('http://192.3.153.102:3000/api/' + name, data)
+        response = requests.post('http://192.3.153.102:3000/api/' + name, data, timeout=10)
         response_json = response.json()
         if response.status_code == 200:
             print('Request successful')
