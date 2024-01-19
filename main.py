@@ -198,13 +198,16 @@ def mp42gif(input_mp4_filename, output_gif_filename):
 def proc_media(media_filename, face_filename, out_file_path, is_enhancement, reference_frame_number):
     print(media_filename, face_filename, out_file_path)
     #python run.py -o ./out.mp4 -s face.jpg -t media.mp4 --frame-processors face_swapper  --headless  --execution-providers coreml
+    mode = 'cuda'
+    if sys.argv[1] == 'cpu':
+        mode = cpu
     command = [
         'python',
         'run.py',
         '-s', face_filename, 
         '-t', media_filename,
         '-o', './' + out_file_path,
-        '--execution-providers', 'cuda', 
+        '--execution-providers', mode, 
         '--headless',
         '--face-selector-mode', 'many',
         '--face-analyser-order', 'best-worst',
@@ -256,7 +259,10 @@ def delete_files(file_paths):
    
 def work():
     global taskData
-    data = callApi("workerGetTask", {})
+    mode = 'cuda'
+    if sys.argv[1] == 'cpu':
+        mode = cpu
+    data = callApi("workerGetTask", {mode:mode})
     print(data)
 
   #  proc_media('media_filename', 'face_filename', 'out_file_path')
