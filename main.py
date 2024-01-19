@@ -200,7 +200,7 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement, ref
     #python run.py -o ./out.mp4 -s face.jpg -t media.mp4 --frame-processors face_swapper  --headless  --execution-providers coreml
     mode = 'cuda'
     if sys.argv[1] == 'cpu':
-        mode = cpu
+        mode = 'cpu'
     command = [
         'python',
         'run.py',
@@ -261,7 +261,7 @@ def work():
     global taskData
     mode = 'cuda'
     if sys.argv[1] == 'cpu':
-        mode = cpu
+        mode = 'cpu'
     data = callApi("workerGetTask", {mode:mode})
     print(data)
 
