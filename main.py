@@ -224,11 +224,11 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement, ref
         '--face-mask-types','occlusion',
         #'--reference-frame-number', reference_frame_number,
         #'--reference-face-distance','1',
-        '--execution-thread-count', '32',
-        '--execution-queue-count','2',
-        '--video-memory-strategy','tolerant',
-        '--temp-frame-format','bmp',
-        '--output-video-preset','ultrafast',
+    #    '--execution-thread-count', '32',
+     #   '--execution-queue-count','2',
+      #  '--video-memory-strategy','tolerant',
+     #   '--temp-frame-format','bmp',
+     #   '--output-video-preset','ultrafast',
         '--face-detector-score','0.25',
         '--frame-processors','face_swapper'
     ]
