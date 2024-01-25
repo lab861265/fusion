@@ -19,46 +19,65 @@ import signal
 import shutil
 
 
-def is_video_720p(file_path):
-    clip = VideoFileClip(file_path)
-    resolution = clip.size
-    if os.path.splitext(file_path)[1].lower() != '.mp4':
-        return False
-    print(f"Video resolution: {resolution[0]}x{resolution[1]}")
-    
-    return resolution[0] <= 1280 and resolution[1] <= 720
-
 def convert_to_720p(input_path):
-    if is_video_720p(input_path):
-        print("Video resolution is 720p or lower. No conversion needed.")
-        return
-
+    clip = VideoFileClip(input_path)
+    resolution = clip.size
+    fps = clip.fps
+    
     # 生成重命名后的文件名
     file_name, file_extension = os.path.splitext(os.path.basename(input_path))
     renamed_path = os.path.join(os.path.dirname(input_path), f"src_{file_name}{file_extension}")
 
-    # 重命名原始文件
-    os.rename(input_path, renamed_path)
+    # 备份原始文件
+    #os.rename(input_path, renamed_path)
+    shutil.copy(input_path, renamed_path)
 
     # 转换并保存为新文件（使用重新编码而非快速拷贝）
     output_path = os.path.join(os.path.dirname(renamed_path), f"{file_name}.mp4")
     ffmpeg_command = [
         'ffmpeg',
         '-y', 
-        '-i', renamed_path,
-        '-vf', 'scale=trunc(iw/4)*2:trunc(ih/4)*2',
-        output_path
+        '-i', renamed_path
     ]
-    subprocess.run(ffmpeg_command)
+    needPro = 0
+    if resolution[0] > 720 or resolution[1] > 720:
+        ffmpeg_command.append('-vf')
+        ffmpeg_command.append('scale=trunc(iw/2)*2:trunc(ih/2)*2')
+        needPro = 1
+    elif resolution[0] > 1280 or resolution[1] > 1280:
+        ffmpeg_command.append('-vf')
+        ffmpeg_command.append('scale=trunc(iw/4)*2:trunc(ih/4)*2')
+        needPro = 1
+    if fps > 25:
+        ffmpeg_command.append('-r')
+        ffmpeg_command.append('25')
+        needPro = 1
+    if os.path.splitext(input_path)[1].lower() != '.mp4':
+        needPro = 1
 
-    print(f"Video successfully converted to 720p. Saved at {output_path}")
+		#if: clip.duration > 120:
+        
+		#else:
+		#	ffmpeg_command.append('-vf')
+       # 	ffmpeg_command.append('scale=-1:720')
+		#ffmpeg_command.append('-c:a')
+        #ffmpeg_command.append('copy')
+    #    needPro = 1
+    ffmpeg_command.append(output_path)
 
+    if needPro:
+        print(ffmpeg_command)
+        #os.remove(output_path)
+        subprocess.run(ffmpeg_command)
+        print(f"Video successfully converted. Saved at {output_path}")
+    else:
+        print(f"No need converted")
 
 def calculate_md5(input_string):
     md5_hash = hashlib.md5(input_string.encode()).hexdigest()
     return md5_hash
 def upload_file(url, file_path):
-    chunk_size = 1024 * 1024  # 1MB
+    chunk_size = 1024 * 1024 * 2  # 1MB
     total_chunks = -(-os.path.getsize(file_path) // chunk_size)  # 總分片數，無條件取整
     current_chunk = 0
     data = {'name': '', 'link': ''}
@@ -216,6 +235,7 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement, ref
         #'--reference-frame-number', reference_frame_number,
         #'--reference-face-distance','1',
         '--face-detector-score','0.25',
+        '--output-video-quality','70',
         '--frame-processors','face_swapper'
     ]
     if is_enhancement:
@@ -262,7 +282,7 @@ def work():
     mode = 'cuda'
     if sys.argv[1] == 'cpu':
         mode = 'cpu'
-    data = callApi("workerGetTask", {'mode':mode})
+    data = callApi("workerGetTaskTest", {'mode':mode})
     print(data)
 
   #  proc_media('media_filename', 'face_filename', 'out_file_path')
