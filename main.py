@@ -178,7 +178,7 @@ def gif2mp4(gif, mp4):
         '-i', gif,
         '-c:v', 'libx264',  # 使用H.264编码器
         '-pix_fmt', 'yuv420p',  # 设置像素格式，通常需要
-        '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',  # 将高度和宽度调整为2的倍数
+   #     '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',  # 将高度和宽度调整为2的倍数
         '-y',  # 强制覆盖
         mp4
     ]
