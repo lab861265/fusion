@@ -282,7 +282,8 @@ def work():
     mode = 'cuda'
     if sys.argv[1] == 'cpu':
         mode = 'cpu'
-    data = callApi("workerGetTask", {'mode':mode})
+    term = sys.argv[2] if len(sys.argv) > 2 else 'cuda'
+    data = callApi("workerGetTask", {'mode':mode, 'term':term})
     print(data)
 
   #  proc_media('media_filename', 'face_filename', 'out_file_path')
