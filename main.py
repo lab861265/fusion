@@ -146,6 +146,40 @@ def upload_image(upload_url, image_path):
     except Exception as e:
         print('Error:', str(e))
 
+def add_border(input_image_path, output_image_path):
+    try:
+        # 读取图片
+        img = cv2.imread(input_image_path)
+        
+        # 检查是否成功读取图片
+        if img is None:
+            raise FileNotFoundError(f"Error: Unable to open image file {input_image_path}")
+        
+        # 获取图片的高度和宽度
+        height, width = img.shape[:2]
+        
+        # 计算边框厚度
+        border_thickness = min(height, width) // 4
+        
+        # 添加黑色边框
+        img_with_border = cv2.copyMakeBorder(
+            img,
+            top=border_thickness,
+            bottom=border_thickness,
+            left=border_thickness,
+            right=border_thickness,
+            borderType=cv2.BORDER_CONSTANT,
+            value=[0, 0, 0]  # 黑色
+        )
+        
+        # 保存带有边框的图片
+        cv2.imwrite(output_image_path, img_with_border)
+        
+        print(f"Successfully added border to {input_image_path} and saved to {output_image_path}")
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
 
 def generate_video_thumbnail(video_path, thumbnail_path, max_size=512):
     cap = cv2.VideoCapture(video_path)
@@ -318,6 +352,8 @@ def work():
         
     download_file(media_file_url, media_filename)
     download_file(face_file_url, face_filename)
+
+    add_border(face_filename, face_filename)
 
     extName = os.path.splitext(media_file_url)[1].lower()
 
