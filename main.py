@@ -18,6 +18,10 @@ import platform
 import signal
 import shutil
 
+import http.client
+from urllib.parse import urlparse
+from tqdm import tqdm
+
 
 def convert_to_720p(input_path):
     clip = VideoFileClip(input_path)
