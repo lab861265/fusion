@@ -236,7 +236,28 @@ def add_border(input_image_path, output_image_path):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+def generate_img_thumbnail(image_path, thumbnail_path, max_size=512):
+    # 读取图片
+    image = cv2.imread(image_path)
+    
+    if image is None:
+        raise ValueError(f"Unable to read image from {image_path}")
 
+    # 获取图片的宽和高
+    height, width, _ = image.shape
+
+    # 调整缩略图的大小
+    if width > max_size or height > max_size:
+        if width > height:
+            new_width = max_size
+            new_height = int(height * (max_size / width))
+        else:
+            new_height = max_size
+            new_width = int(width * (max_size / height))
+        image = cv2.resize(image, (new_width, new_height))
+    
+    # 保存缩略图
+    cv2.imwrite(thumbnail_path, image)
 def generate_video_thumbnail(video_path, thumbnail_path, max_size=512):
     cap = cv2.VideoCapture(video_path)
     ret, frame = cap.read()
