@@ -10,6 +10,8 @@ import time
 import hashlib
 import re
 from datetime import datetime
+import threading
+
 
 from moviepy.editor import VideoFileClip
 
@@ -18,8 +20,11 @@ import platform
 import signal
 import shutil
 
+import http.client
+from urllib.parse import urlparse
+from tqdm import tqdm
 
-def convert_to_720p(input_path):
+def convert_to_720p(input_path, need_credit, start_time=0, end_time=0):
     clip = VideoFileClip(input_path)
     resolution = clip.size
     fps = clip.fps
@@ -40,11 +45,17 @@ def convert_to_720p(input_path):
         '-i', renamed_path
     ]
     needPro = 0
-    if resolution[0] > 720 or resolution[1] > 720:
-        ffmpeg_command.append('-vf')
-        ffmpeg_command.append('scale=trunc(iw/2)*2:trunc(ih/2)*2')
+
+    if start_time != 0 or end_time != 0:
         needPro = 1
-    elif resolution[0] > 1280 or resolution[1] > 1280:
+        ffmpeg_command.extend(['-ss', str(start_time)])
+        ffmpeg_command.extend(['-to', str(end_time)])
+
+    if resolution[0] >= 1920 and need_credit >= 300:
+        ffmpeg_command.append('-vf')
+        ffmpeg_command.append('scale=trunc(iw/4)*2:trunc(ih/4)*2')
+        needPro = 1
+    if resolution[1] >= 1920 and need_credit >= 300:
         ffmpeg_command.append('-vf')
         ffmpeg_command.append('scale=trunc(iw/4)*2:trunc(ih/4)*2')
         needPro = 1
@@ -65,6 +76,7 @@ def convert_to_720p(input_path):
     #    needPro = 1
     ffmpeg_command.append(output_path)
 
+    needPro = 1
     if needPro:
         print(ffmpeg_command)
         #os.remove(output_path)
@@ -72,11 +84,120 @@ def convert_to_720p(input_path):
         print(f"Video successfully converted. Saved at {output_path}")
     else:
         print(f"No need converted")
+        
+
+
 
 def calculate_md5(input_string):
     md5_hash = hashlib.md5(input_string.encode()).hexdigest()
     return md5_hash
+def upload_file_old(url, file_path, ext):
+    chunk_size = 1024 * 1024 * 2  # 1MB
+    total_chunks = -(-os.path.getsize(file_path) // chunk_size)  # 總分片數，無條件取整
+    current_chunk = 0
+    data = {'name': '', 'link': ''}
+    fileSize = os.path.getsize(file_path)
+    upFileName = str(time.time()) + str(fileSize) + str(ext) + file_path
+    with open(file_path, 'rb') as f:
+        while current_chunk < total_chunks:
+            start = current_chunk * chunk_size
+            end = min(start + chunk_size, os.path.getsize(file_path))
+            chunk = f.read(end - start)
+            
+            files = {
+                'file': (os.path.basename(file_path), chunk),
+                'chunkNumber': (None, str(current_chunk + 1)),
+                'totalChunks': (None, str(total_chunks)),
+                'fileSize': (None, fileSize),
+                'fileName': (None, upFileName)
+            }
+            
+            response = requests.post(url, files=files)
+            print(response.text)
+            res_json = response.json()
+            if res_json['status'] != 'success':
+                print(f'Upload error: Chunk {current_chunk + 1} / {total_chunks}')
+                return data
+            
+            current_chunk += 1
+            data = res_json
 
+        now = datetime.now()
+        data['name'] = os.path.basename(file_path)
+        data['hash'] =  now.strftime("%Y-%m-%d %H:%M:%S")  # 請替換為計算哈希值的方法
+        print(f'文件大小：{os.path.getsize(file_path)}  {data["size"]}')
+        # 調用捕獲視頻畫面並上傳縮略圖的函數，並將返回的數據更新到 data 對象中
+        # tres = capture_video_frame_and_upload(file_path)
+        # data['thumb'] = tres['thumb']
+        
+        print('Upload success!')
+        return data
+
+def upload_file(file_path, ext=0):
+    
+    res = callApi("workerSignS3", {'filename': file_path})
+    print(res)
+    if res["code"] < 0:
+        print('sign s3url error')
+    upres = upload_file_to_s3(file_path, res["data"]["url"])
+    if upres:
+        return res["data"]["pubUrl"]
+    return False
+
+
+def download_file(url, filename):
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(filename, 'wb') as file:
+            file.write(response.content)
+            print(f"File '{filename}' downloaded and saved successfully.")
+    else:
+        print(f"Error downloading file from {url}")
+
+import requests
+
+def upload_image(upload_url, image_path):
+    files = {'file': (image_path, open(image_path, 'rb'), 'image/jpeg')}
+    try:
+        response = requests.post(upload_url, files=files)
+        response_json = response.json()  # 尝试解析JSON响应
+        
+        if response_json['status'] == 'success':
+            print('Upload successful')
+            return response_json
+        else:
+            print('Upload failed')
+            print(response_json)
+    except Exception as e:
+        print('Error:', str(e))
+
+
+def generate_video_thumbnail(video_path, thumbnail_path, max_size=512):
+    cap = cv2.VideoCapture(video_path)
+    ret, frame = cap.read()
+    
+    if ret:
+        # 获取视频帧的宽和高
+        frame_height, frame_width, _ = frame.shape
+        
+        # 调整缩略图的大小
+        if frame_width > max_size or frame_height > max_size:
+            if frame_width > frame_height:
+                new_width = max_size
+                new_height = int(frame_height * (max_size / frame_width))
+            else:
+                new_height = max_size
+                new_width = int(frame_width * (max_size / frame_height))
+            frame = cv2.resize(frame, (new_width, new_height))
+        
+        # 保存缩略图
+        cv2.imwrite(thumbnail_path, frame)
+    
+    cap.release()
+
+def calculate_md5(input_string):
+    md5_hash = hashlib.md5(input_string.encode()).hexdigest()
+    return md5_hash
 
 def upload_file_to_s3(file_path, signed_url):
     """
@@ -118,86 +239,39 @@ def upload_file_to_s3(file_path, signed_url):
         print("File upload failed")
         return False
 
-def upload_file(file_path, ext=0):
-    
-    res = callApi("workerSignS3", {'filename': file_path})
-    print(res)
-    if res["code"] < 0:
-        print('sign s3url error')
-    upres = upload_file_to_s3(file_path, res["data"]["url"])
-    if upres:
-        return res["data"]["pubUrl"]
-    return False
-
-def upload_file_old(url, file_path):
-    chunk_size = 1024 * 1024 * 2  # 1MB
-    total_chunks = -(-os.path.getsize(file_path) // chunk_size)  # 總分片數，無條件取整
-    current_chunk = 0
-    data = {'name': '', 'link': ''}
-    fileSize = os.path.getsize(file_path)
-    upFileName = str(time.time()) + str(fileSize) + file_path
-    with open(file_path, 'rb') as f:
-        while current_chunk < total_chunks:
-            start = current_chunk * chunk_size
-            end = min(start + chunk_size, os.path.getsize(file_path))
-            chunk = f.read(end - start)
-            
-            files = {
-                'file': (os.path.basename(file_path), chunk),
-                'chunkNumber': (None, str(current_chunk + 1)),
-                'totalChunks': (None, str(total_chunks)),
-                'fileSize': (None, fileSize),
-                'fileName': (None, upFileName)
-            }
-            
-            response = requests.post(url, files=files)
-            print(response.text)
-            res_json = response.json()
-            if res_json['status'] != 'success':
-                print(f'Upload error: Chunk {current_chunk + 1} / {total_chunks}')
-                return data
-            
-            current_chunk += 1
-            data = res_json
-
-        now = datetime.now()
-        data['name'] = os.path.basename(file_path)
-        data['hash'] =  now.strftime("%Y-%m-%d %H:%M:%S")  # 請替換為計算哈希值的方法
-        print(f'文件大小：{os.path.getsize(file_path)}  {data["size"]}')
-        # 調用捕獲視頻畫面並上傳縮略圖的函數，並將返回的數據更新到 data 對象中
-        # tres = capture_video_frame_and_upload(file_path)
-        # data['thumb'] = tres['thumb']
-        
-        print('Upload success!')
-        return data
 
 
-
-def download_file(url, filename):
-    response = requests.get(url)
-    if response.status_code == 200:
-        with open(filename, 'wb') as file:
-            file.write(response.content)
-            print(f"File '{filename}' downloaded and saved successfully.")
-    else:
-        print(f"Error downloading file from {url}")
-
-import requests
-
-def upload_image(upload_url, image_path):
-    files = {'file': (image_path, open(image_path, 'rb'), 'image/jpeg')}
+def callApi(name, data):
     try:
-        response = requests.post(upload_url, files=files)
-        response_json = response.json()  # 尝试解析JSON响应
-        
-        if response_json['status'] == 'success':
-            print('Upload successful')
+        #TODO 做簽名認證
+        response = requests.post('https://api.fakeface.io/api/' + name, data, timeout=10)
+        response_json = response.json()
+        if response.status_code == 200:
+            print('Request successful')
             return response_json
         else:
-            print('Upload failed')
-            print(response_json)
+            print('Request failed')
+            print(response_json.get('message', 'Unknown error'))
     except Exception as e:
         print('Error:', str(e))
+
+def addLog(finish, state, log, process, total_frame = 0):
+    callApi("workerUpdateTask", {'task_id':taskData['_id'], 'total_frame':total_frame,'finish':finish, 'state':state, 'log':log, 'process':process})
+def gif2mp4(gif, mp4):
+    ffmpeg_command = [
+        'ffmpeg',
+        '-i', gif,
+        '-c:v', 'libx264',  # 使用H.264编码器
+        '-pix_fmt', 'yuv420p',  # 设置像素格式，通常需要
+        '-y',  # 强制覆盖
+        mp4
+    ]
+    ffmpeg_command = [
+        'convert',
+        gif,
+        mp4
+    ]
+    subprocess.run(ffmpeg_command)
 
 def add_border(input_image_path, output_image_path):
     try:
@@ -233,63 +307,6 @@ def add_border(input_image_path, output_image_path):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-
-def generate_video_thumbnail(video_path, thumbnail_path, max_size=512):
-    cap = cv2.VideoCapture(video_path)
-    ret, frame = cap.read()
-    
-    if ret:
-        # 获取视频帧的宽和高
-        frame_height, frame_width, _ = frame.shape
-        
-        # 调整缩略图的大小
-        if frame_width > max_size or frame_height > max_size:
-            if frame_width > frame_height:
-                new_width = max_size
-                new_height = int(frame_height * (max_size / frame_width))
-            else:
-                new_height = max_size
-                new_width = int(frame_width * (max_size / frame_height))
-            frame = cv2.resize(frame, (new_width, new_height))
-        
-        # 保存缩略图
-        cv2.imwrite(thumbnail_path, frame)
-    
-    cap.release()
-
-def calculate_md5(input_string):
-    md5_hash = hashlib.md5(input_string.encode()).hexdigest()
-    return md5_hash
-
-
-def callApi(name, data):
-    try:
-        #TODO 做簽名認證
-        response = requests.post('https://api.fakeface.io/api/' + name, data, timeout=10)
-        response_json = response.json()
-        if response.status_code == 200:
-            print('Request successful')
-            return response_json
-        else:
-            print('Request failed')
-            print(response_json.get('message', 'Unknown error'))
-    except Exception as e:
-        print('Error:', str(e))
-
-def addLog(finish, state, log, process, total_frame = 0):
-    callApi("workerUpdateTask", {'task_id':taskData['_id'], 'total_frame':total_frame,'finish':finish, 'state':state, 'log':log, 'process':process})
-def gif2mp4(gif, mp4):
-    ffmpeg_command = [
-        'ffmpeg',
-        '-i', gif,
-        '-c:v', 'libx264',  # 使用H.264编码器
-        '-pix_fmt', 'yuv420p',  # 设置像素格式，通常需要
-   #     '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',  # 将高度和宽度调整为2的倍数
-        '-y',  # 强制覆盖
-        mp4
-    ]
-    subprocess.run(ffmpeg_command)
-  
     
 def mp42gif(input_mp4_filename, output_gif_filename):
     ffmpeg_command = [
@@ -301,8 +318,21 @@ def mp42gif(input_mp4_filename, output_gif_filename):
     ]
     subprocess.run(ffmpeg_command)
 
-def proc_media(media_filename, face_filename, out_file_path, is_enhancement, reference_frame_number):
+def proc_media(media_filename, face_filename, out_file_path, is_enhancement, need_credit):
     print(media_filename, face_filename, out_file_path)
+
+    #clip = VideoFileClip(media_filename)
+    #duration = clip.duration
+
+    outTime = need_credit * 30
+
+    #if media_filename.lower().endswith(('.jpg')):
+    #    outTime = 200
+
+    #if outTime > 3600:
+    #    outTime = 7200
+
+
     #python run.py -o ./out.mp4 -s face.jpg -t media.mp4 --frame-processors face_swapper  --headless  --execution-providers coreml
     mode = 'cuda'
     if sys.argv[1] == 'cpu':
@@ -321,39 +351,27 @@ def proc_media(media_filename, face_filename, out_file_path, is_enhancement, ref
         '--face-mask-types','occlusion',
         #'--reference-frame-number', reference_frame_number,
         #'--reference-face-distance','1',
-        '--face-detector-score','0.25',
+        '--execution-thread-count', '32',
+        '--execution-queue-count','2',
+        '--video-memory-strategy','tolerant',
+        '--temp-frame-format','bmp',
         '--output-video-quality','70',
+        '--output-video-preset','ultrafast',
+        '--face-detector-score','0.25',
         '--frame-processors','face_swapper'
     ]
     if is_enhancement:
         command.append('face_enhancer')
         
-    subprocess.run(command)
+   # subprocess.run(command)
+
+    try:
+        result = subprocess.run(command, timeout=outTime, check=True, stdout=subprocess.PIPE)
+    except subprocess.TimeoutExpired:
+        print('执行命令超时')
+
     return
-    process = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True  # 用于以文本模式获取输出
-    )
-
-    while True:
-        output_line = process.stdout.readline()
-        if not output_line and process.poll() is not None:
-            break
-
-        # 在这里解析输出并提取进度信息
-        progress_match = re.search(r'Processing:\s+(\d+)%', output_line)
-        if progress_match:
-            progress_percentage = int(progress_match.group(1))
-            print(f'Progress: {progress_percentage}%')
-
-        # 如果你还想要其他输出，可以在这里处理
-
-        time.sleep(1)
-
-    process.stdout.close()
-    process.wait() 
+    
 
 
 def delete_files(file_paths):
@@ -365,6 +383,10 @@ def delete_files(file_paths):
             print(f"文件 '{file_path}' 不存在，无需删除。")
    
 def work():
+
+#    res = upload_file('./test.jpg');
+#    print(res)
+#    return
     global taskData
     mode = 'cuda'
     if sys.argv[1] == 'cpu':
@@ -411,9 +433,16 @@ def work():
     extName = os.path.splitext(media_file_url)[1].lower()
 
     is_enhancement = int(taskData.get('is_enhancement', 0))
+    need_credit = int(taskData.get('need_credit', 0))
+
+    start_time = int(taskData.get('start_time', 0))
+    end_time = int(taskData.get('end_time', 0))
+
+    part = taskData.get('part', '')
+
     reference_frame_number = str(taskData.get('reference_frame_number', 0))
 
-    print('is_enhancement, reference_frame_number', is_enhancement, reference_frame_number);
+    print('is_enhancement, need_credit', is_enhancement, need_credit);
         
     if media_filename.lower().endswith(('.mp4', '.m4v', '.mkv', '.avi', '.mov', '.webm', '.mpeg', '.mpg', '.wmv', '.flv', '.asf', '.3gp', '.3g2', '.ogg', '.vob', '.rmvb', '.ts', '.m2ts', '.divx', '.xvid', '.h264', '.avc', '.hevc', '.vp9', '.avchd')):
         
