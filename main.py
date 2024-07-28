@@ -497,8 +497,6 @@ def work():
         upload_file_url = upload_file(out_file_path)
         upload_image_url = upload_file(thumb_file_path)
         now = datetime.now()
-
-        print('Upload result:', upload_res)
         api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_file_url, 'thumb_url':upload_image_url, 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S") })
         print('Api result:', api_res)
         addLog(1, 3, 'finish', 100)
