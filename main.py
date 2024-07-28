@@ -76,7 +76,59 @@ def convert_to_720p(input_path):
 def calculate_md5(input_string):
     md5_hash = hashlib.md5(input_string.encode()).hexdigest()
     return md5_hash
-def upload_file(url, file_path):
+
+def upload_file_to_s3(file_path, signed_url):
+    """
+    Uploads a file to a signed S3 URL with progress information using http.client.
+
+    :param file_path: The path to the file to upload.
+    :param signed_url: The signed URL to upload the file to.
+    """
+    file_size = os.path.getsize(file_path)
+    url_parts = urlparse(signed_url)
+    conn = http.client.HTTPSConnection(url_parts.netloc)
+    
+    with open(file_path, 'rb') as file, tqdm(total=file_size, unit='B', unit_scale=True, desc=file_path) as pbar:
+        headers = {
+            'Content-Type': 'application/octet-stream',
+            'Content-Length': str(file_size),
+        }
+
+        conn.putrequest("PUT", url_parts.path + '?' + url_parts.query)
+        for key, value in headers.items():
+            conn.putheader(key, value)
+        conn.endheaders()
+
+        # Upload file in chunks
+        chunk_size = 1024 * 1024  # 1MB
+        while True:
+            data = file.read(chunk_size)
+            if not data:
+                break
+            conn.send(data)
+            pbar.update(len(data))
+
+    response = conn.getresponse()
+    print(response.status, response.reason)
+    if response.status == 200:
+        print("File uploaded successfully")
+        return True
+    else:
+        print("File upload failed")
+        return False
+
+def upload_file(file_path, ext=0):
+    
+    res = callApi("workerSignS3", {'filename': file_path})
+    print(res)
+    if res["code"] < 0:
+        print('sign s3url error')
+    upres = upload_file_to_s3(file_path, res["data"]["url"])
+    if upres:
+        return res["data"]["pubUrl"]
+    return False
+
+def upload_file_old(url, file_path):
     chunk_size = 1024 * 1024 * 2  # 1MB
     total_chunks = -(-os.path.getsize(file_path) // chunk_size)  # 總分片數，無條件取整
     current_chunk = 0
@@ -376,11 +428,11 @@ def work():
             print(f"找不到文件 {out_file_path}")
             addLog(1, -1, 'Processing failed', 99)
             return
-        upload_video_res = upload_file('https://fakeface.io/upload.php?m=media', out_file_path)
-        upload_image_res = upload_image('https://fakeface.io/upload.php?m=thumb', thumb_file_path)
-        print('Upload result:', upload_video_res, upload_image_res)
+        upload_video_url = upload_file(out_file_path)
+        upload_image_url = upload_file(thumb_file_path)
+        print('Upload result:', upload_video_url, upload_image_url)
         now = datetime.now()
-        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_res['link'], 'thumb_url':upload_image_res['thumb'], 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S")})
+        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_url, 'thumb_url':upload_image_url, 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S")})
         print('Api result:', api_res)
         addLog(1, 3, 'finish', 100)
         return
@@ -398,11 +450,11 @@ def work():
             print(f"找不到文件 {out_file_path}")
             addLog(1, -1, 'Processing failed', 99)
             return
-        upload_video_res = upload_file('https://fakeface.io/upload.php?m=media', out_file_path)
-        upload_image_res = upload_image('https://fakeface.io/upload.php?m=thumb', thumb_file_path)
-        print('Upload result:', upload_video_res, upload_image_res)
+        upload_video_url = upload_file(out_file_path)
+        upload_image_url = upload_file(thumb_file_path)
+        print('Upload result:', upload_video_url, upload_image_url)
         now = datetime.now()
-        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_res['link'], 'thumb_url':upload_image_res['thumb'], 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S")})
+        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_video_url, 'thumb_url':upload_image_url, 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S")})
         print('Api result:', api_res)
         addLog(1, 3, 'finish', 100)
         return
@@ -415,12 +467,13 @@ def work():
             print(f"找不到文件 {out_file_path}")
             addLog(1, -1, 'Processing failed', 99)
             return
-     #   addLog(0, 2, 'finish quickly', 99)
-        upload_res = upload_image('https://fakeface.io/upload.php?m=png', out_file_path)
+        addLog(0, 2, 'finish quickly', 99)
+        upload_file_url = upload_file(out_file_path)
+        upload_image_url = upload_file(thumb_file_path)
         now = datetime.now()
 
         print('Upload result:', upload_res)
-        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_res['link'], 'thumb_url':upload_res['thumb'], 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S") })
+        api_res = callApi("wokerAddMedia", {'user_id':data['data']['user_id'], 'media_id':data['data']['finish_media_id'], 'file_url':upload_file_url, 'thumb_url':upload_image_url, 'file_hash':now.strftime("%Y-%m-%d %H:%M:%S") })
         print('Api result:', api_res)
         addLog(1, 3, 'finish', 100)
         return
