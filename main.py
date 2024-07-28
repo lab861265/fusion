@@ -466,7 +466,8 @@ def work():
         out_file_path = 'media_out.jpg'
         real_out_file_path = 'media_out.jpg'
         proc_media(media_filename, face_filename, out_file_path, 1,reference_frame_number)
-
+        thumb_file_path = 'thumb_media.jpg'
+        generate_img_thumbnail(out_file_path, thumb_file_path)
         if not os.path.exists(out_file_path):
             print(f"找不到文件 {out_file_path}")
             addLog(1, -1, 'Processing failed', 99)
