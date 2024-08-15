@@ -40,7 +40,7 @@ MODELS : ModelSet =\
 	'inswapper_128':
 	{
 		'type': 'inswapper',
-		'url': 'https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128.onnx',
+		'url': 'https://github.com/lab861265/fusion2/releases/download/assets/inswapper_128.onnx',
 		'path': resolve_relative_path('../.assets/models/inswapper_128.onnx'),
 		'template': 'arcface_128_v2',
 		'size': (128, 128),
@@ -50,7 +50,7 @@ MODELS : ModelSet =\
 	'inswapper_128_fp16':
 	{
 		'type': 'inswapper',
-		'url': 'https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128_fp16.onnx',
+		'url': 'https://github.com/lab861265/fusion2/releases/download/assets/inswapper_128_fp16.onnx',
 		'path': resolve_relative_path('../.assets/models/inswapper_128_fp16.onnx'),
 		'template': 'arcface_128_v2',
 		'size': (128, 128),
@@ -60,7 +60,7 @@ MODELS : ModelSet =\
 	'simswap_256':
 	{
 		'type': 'simswap',
-		'url': 'https://github.com/facefusion/facefusion-assets/releases/download/models/simswap_256.onnx',
+		'url': 'https://github.com/lab861265/fusion2/releases/download/assets/simswap_256.onnx',
 		'path': resolve_relative_path('../.assets/models/simswap_256.onnx'),
 		'template': 'arcface_112_v1',
 		'size': (112, 256),
@@ -70,7 +70,7 @@ MODELS : ModelSet =\
 	'simswap_512_unofficial':
 	{
 		'type': 'simswap',
-		'url': 'https://github.com/facefusion/facefusion-assets/releases/download/models/simswap_512_unofficial.onnx',
+		'url': 'https://github.com/lab861265/fusion2/releases/download/assets/simswap_512_unofficial.onnx',
 		'path': resolve_relative_path('../.assets/models/simswap_512_unofficial.onnx'),
 		'template': 'arcface_112_v1',
 		'size': (112, 512),
