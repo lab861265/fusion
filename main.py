@@ -520,7 +520,7 @@ def work():
     if media_filename.lower().endswith(('.jpg')):
         out_file_path = 'media_out.jpg'
         real_out_file_path = 'media_out.jpg'
-	add_watermark_to_image(media_filename)
+        add_watermark_to_image(media_filename)
         proc_media(media_filename, face_filename, out_file_path, 1,reference_frame_number)
         thumb_file_path = 'thumb_media.jpg'
         generate_img_thumbnail(out_file_path, thumb_file_path)
