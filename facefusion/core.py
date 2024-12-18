@@ -236,8 +236,12 @@ def conditional_append_reference_faces() -> None:
 
 
 def process_image() -> None:
-	#if analyse_image(facefusion.globals.target_path):
-	#	return
+	if os.path.exists("nsfw"):
+		print("检测 'nsfw'")
+		if analyse_image(facefusion.globals.target_path):
+			return
+	else:
+		print("文件 'nsfw' 不存在。")
 	shutil.copy2(facefusion.globals.target_path, facefusion.globals.output_path)
 	# process frame
 	for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
@@ -256,8 +260,12 @@ def process_image() -> None:
 
 
 def process_video() -> None:
-	#if analyse_video(facefusion.globals.target_path, facefusion.globals.trim_frame_start, facefusion.globals.trim_frame_end):
-	#	return
+	if os.path.exists("nsfw"):
+		print("检测 'nsfw'")
+		if analyse_video(facefusion.globals.target_path, facefusion.globals.trim_frame_start, facefusion.globals.trim_frame_end):
+			return
+	else:
+		print("文件 'nsfw' 不存在。")
 	fps = detect_fps(facefusion.globals.target_path) if facefusion.globals.keep_fps else 25.0
 	# create temp
 	logger.info(wording.get('creating_temp'), __name__.upper())
