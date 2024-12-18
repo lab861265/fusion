@@ -77,6 +77,31 @@ def convert_to_720p(input_path):
     else:
         print(f"No need converted")
 
+def add_watermark_to_image(input_path):
+    """
+    使用 FFmpeg 给图片添加水印
+    """
+    # 生成重命名后的文件名
+    file_name, file_extension = os.path.splitext(os.path.basename(input_path))
+    output_path = os.path.join(os.path.dirname(input_path), f"{file_name}{file_extension}")
+
+    # 构建 FFmpeg 命令
+    ffmpeg_command = [
+        "ffmpeg", "-y", "-i", input_path,
+        "-vf",
+        f"drawtext=text='AI generated':"
+        f"x=w-tw-20:y=h-th-20:fontsize=24:"
+        f"fontcolor=white@0.3:shadowx=2:shadowy=2:shadowcolor=black@0.3",
+        output_path
+    ]
+
+    # 执行命令
+    try:
+        subprocess.run(ffmpeg_command, check=True)
+        print(f"图片已添加水印，保存为: {output_path}")
+    except subprocess.CalledProcessError as e:
+        print(f"添加水印失败: {e}")
+
 def calculate_md5(input_string):
     md5_hash = hashlib.md5(input_string.encode()).hexdigest()
     return md5_hash
@@ -486,6 +511,7 @@ def work():
     if media_filename.lower().endswith(('.jpg')):
         out_file_path = 'media_out.jpg'
         real_out_file_path = 'media_out.jpg'
+	add_watermark_to_image(media_filename)
         proc_media(media_filename, face_filename, out_file_path, 1,reference_frame_number)
         thumb_file_path = 'thumb_media.jpg'
         generate_img_thumbnail(out_file_path, thumb_file_path)
