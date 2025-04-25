@@ -89,7 +89,7 @@ def add_watermark_to_image(input_path):
     ffmpeg_command = [
         "ffmpeg", "-y", "-i", input_path,
         "-vf",
-        f"drawtext=text='AI generated':"
+        f"drawtext=text='':"
         f"x=w-tw-20:y=h-th-20:fontsize=24:"
         f"fontcolor=white@0.3:shadowx=2:shadowy=2:shadowcolor=black@0.3",
         output_path
